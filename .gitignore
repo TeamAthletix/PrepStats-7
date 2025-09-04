@@ -1,0 +1,19 @@
+# Node
+node_modules
+
+# Environment
+.env
+
+# Prisma
+.prisma/client
+
+# Logs
+*.log
+
+# Builds
+.next
+out
+
+# Misc
+*.swp
+*.tmp
