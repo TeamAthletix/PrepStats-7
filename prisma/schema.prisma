@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ATHLETE
+  COACH
+  PARENT
+  MEDIA
+  ORG
+  ADMIN
+}
+
+enum SubscriptionTier {
+  FREE
+  BASIC
+  ELITE
+  ELITE_ANNUAL
+}
+
+model User {
+  id               Int               @id @default(autoincrement())
+  email            String            @unique
+  password         String
+  role             Role
+  tokensAvailable  Int               @default(0)
+  tokensSpent      Int               @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  athleteProfile   AthleteProfile?
+  statEntries      StatEntry[]
+  awards           Award[]
+  media            Media[]
+  verifications    StatEntry[]       @relation("Verifier")
+  subscriptions    Subscription[]
+  votes            Vote[]
+  posters          Poster[]
+  transactions     TransactionLog[]
+  auditLogs        AuditLog[]
+}
+
+model Subscription {
+  id                   Int               @id @default(autoincrement())
+  userId               Int
+  tier                 SubscriptionTier
+  stripeSubscriptionId String?
+  startDate            DateTime          @default(now())
+  endDate              DateTime?
+
+  user                 User              @relation(fields: [userId], references: [id])
+}
+
+model Poll {
+  id         Int      @id @default(autoincrement())
+  title      String
+  nominees   Json
+  expiration DateTime
+  createdAt  DateTime @default(now())
+
+  votes      Vote[]
+}
+
+model Vote {
+  id         Int      @id @default(autoincrement())
+  pollId     Int
+  userId     Int
+  nomineeId  String
+  tokenCount Int      @default(1)
+  timestamp  DateTime @default(now())
+
+  poll       Poll     @relation(fields: [pollId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model Poster {
+  id         String   @id @default(uuid())
+  userId     Int
+  playerName String
+  team       String
+  position   String?
+  statLine   String
+  theme      String
+  url        String
+  timestamp  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model TransactionLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  action    String
+  details   Json?
+  timestamp DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model AthleteProfile {
+  id        Int    @id @default(autoincrement())
+  userId    Int    @unique
+  name      String
+  school    String
+  sport     String
+  bio       String?
+
+  user      User   @relation(fields: [userId], references: [id])
+}
+
+model StatEntry {
+  id         Int      @id @default(autoincrement())
+  athleteId  Int
+  statType   String
+  value      Float
+  date       DateTime
+  verified   Boolean  @default(false)
+  verifierId Int?
+
+  athlete    User     @relation(fields: [athleteId], references: [id])
+  verifier   User?    @relation("Verifier", fields: [verifierId], references: [id])
+}
+
+model Award {
+  id             Int      @id @default(autoincrement())
+  athleteId      Int
+  name           String
+  description    String?
+  paymentStatus  String   @default("pending")
+  stripePaymentId String?
+
+  athlete        User     @relation(fields: [athleteId], references: [id])
+}
+
+model Media {
+  id        Int      @id @default(autoincrement())
+  athleteId Int
+  type      String
+  url       String
+  uploadedAt DateTime @default(now())
+
+  athlete   User     @relation(fields: [athleteId], references: [id])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  adminId   Int
+  action    String
+  details   String?
+  timestamp DateTime @default(now())
+
+  admin     User     @relation(fields: [adminId], references: [id])
+}
