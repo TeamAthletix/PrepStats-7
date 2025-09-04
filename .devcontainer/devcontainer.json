@@ -1,0 +1,15 @@
+{
+  "name": "PrepStats Dev Container",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {}
+  },
+  "postCreateCommand": "pnpm install && pnpm prisma generate",
+  "customizations": {
+    "vscode": {
+      "extensions": ["prisma.prisma"]
+    }
+  }
+}

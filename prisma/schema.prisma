@@ -156,3 +156,11 @@ model AuditLog {
 
   admin     User     @relation(fields: [adminId], references: [id])
 }
+
+model School {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  city      String
+  state     String
+  class     String
+}
