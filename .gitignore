@@ -1,19 +1,10 @@
-# Node
-node_modules
-
-# Environment
+node_modules/
 .env
-
-# Prisma
-.prisma/client
-
-# Logs
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.next/
+.vercel
 *.log
-
-# Builds
-.next
-out
-
-# Misc
-*.swp
-*.tmp
+.DS_Store

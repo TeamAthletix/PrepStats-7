@@ -1,48 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
 model User {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(cuid())
   email     String   @unique
-  password  String
-  role      String
-  tokens    Int      @default(0) // Tokens for user
-  isTrusted Boolean  @default(false) // Trusted user status
-  profiles  Profile[]
+  password  String?
+  role      Role     @default(ATHLETE)
+  tokens    Int      @default(0)
+  isTrusted Boolean  @default(false)
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  profiles          Profile[]
+  stats             Stat[]
+  tokenTransactions TokenTransaction[]
+  spotlights        Spotlight[]
+  posters           Poster[]
+  
+  @@map("users")
 }
 
 model Profile {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @unique
-  user        User     @relation(fields: [userId], references: [id])
-  type        String   // athlete, coach, media, parent, fan, organization
-  gradYear    Int?     // For athletes
-  team        String?  // For coaches
-  outlet      String?  // For media
-  affiliation String?  // For organizations
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        ProfileType
+  firstName   String
+  lastName    String
+  gradYear    Int?
+  position    String?
+  teamId      String?
+  team        Team?    @relation(fields: [teamId], references: [id])
+  school      String?
+  outlet      String?
+  affiliation String?
+  bio         String?
+  avatar      String?
+  placeholder Boolean  @default(false)
+  public      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
   stats       Stat[]
-  placeholder Boolean  @default(false) // For coach-entered new players
+  spotlights  Spotlight[]
+  
+  @@map("profiles")
+}
+
+model Team {
+  id          String   @id @default(cuid())
+  name        String
+  school      String
+  state       String   @default("Alabama")
+  sport       Sport
+  season      String
+  coachId     String?
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  profiles    Profile[]
+  stats       Stat[]
+  
+  @@unique([school, sport, season])
+  @@map("teams")
 }
 
 model Stat {
-  id          Int      @id @default(autoincrement())
-  profileId   Int
-  profile     Profile  @relation(fields: [profileId], references: [id])
-  sport       String
-  gameDate    DateTime
-  opponent    String
-  season      String
-  metrics     Json     // Custom stat data
-  mediaLink   String?
-  verified    Boolean  @default(false)
-  verifiedBy  String?  // coach, media, admin, AI
-  createdBy   String   // athlete, coach
-  submissionCount Int  @default(0) // Track submissions for trusted status
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  profileId       String
+  profile         Profile  @relation(fields: [profileId], references: [id])
+  teamId          String?
+  team            Team?    @relation(fields: [teamId], references: [id])
+  sport           Sport
+  gameDate        DateTime
+  opponent        String
+  season          String
+  week            Int?
+  isHome          Boolean  @default(true)
+  gameResult      String?
+  metrics         Json
+  mediaLink       String?
+  verified        Boolean  @default(false)
+  verifiedBy      String?
+  verifierRole    Role?
+  createdBy       String
+  submissionCount Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("stats")
 }
 
+model Spotlight {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  profileId   String
+  profile     Profile  @relation(fields: [profileId], references: [id])
+  title       String
+  description String
+  imageUrl    String?
+  startDate   DateTime
+  endDate     DateTime
+  cost        Int
+  approved    Boolean  @default(false)
+  active      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("spotlights")
+}
+
+model TokenTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  type        TransactionType
+  amount      Int
+  description String
+  stripeId    String?
+  createdAt   DateTime @default(now())
+  
+  @@map("token_transactions")
+}
+
+model Award {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  sport       Sport
+  week        Int?
+  season      String
+  winnerId    String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  
+  @@map("awards")
+}
+
+model PosterTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  displayName String
+  description String?
+  basePrice   Int
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  
+  posters     Poster[]
+  
+  @@map("poster_templates")
+}
+
+model Poster {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  templateId   String
+  template     PosterTemplate @relation(fields: [templateId], references: [id])
+  
+  playerName   String
+  school       String
+  position     String?
+  customText   String?
+  statsData    Json
+  teamColors   Json
+  teamLogo     String?
+  
+  hasVerifiedStats Boolean @default(false)
+  verifiedStatIds  String[]
+  
+  status       PosterStatus @default(PENDING)
+  imageUrl     String?
+  previewUrl   String?
+  
+  flagged      Boolean @default(false)
+  flagReason   String?
+  adminReviewed Boolean @default(false)
+  adminApproved Boolean @default(false)
+  
+  tokensCost   Int
+  purchased    Boolean @default(false)
+  purchasedAt  DateTime?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("posters")
+}
+
+enum Role {
+  ATHLETE
+  COACH
+  MEDIA
+  PARENT
+  FAN
+  ORGANIZATION
+  ADMIN
+}
+
+enum ProfileType {
+  ATHLETE
+  COACH
+  MEDIA
+  PARENT
+  FAN
+  ORGANIZATION
+}
+
+enum Sport {
+  FOOTBALL
+  GIRLS_FLAG_FOOTBALL
+  BASKETBALL
+  BASEBALL
+  SOFTBALL
+  SOCCER
+  TRACK
+  WRESTLING
+}
+
+enum TransactionType {
+  PURCHASE
+  EARNED
+  SPENT
+  REFUND
+}
+
+enum PosterStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+  FLAGGED
+}
