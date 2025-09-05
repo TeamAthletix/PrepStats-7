@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import bcrypt from 'bcryptjs';
 import prisma from '../../lib/prisma';
+import Layout from '../../components/Layout';
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -13,21 +14,33 @@ const Register = () => {
     await prisma.user.create({
       data: { email, password: hashedPassword, role },
     });
-    // Redirect to login or auto-signin
     window.location.href = '/auth/login';
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-      <select value={role} onChange={(e) => setRole(e.target.value)}>
-        <option value="ATHLETE">Athlete</option>
-        <option value="COACH">Coach</option>
-        {/* Add other roles */}
-      </select>
-      <button type="submit">Register</button>
-    </form>
+    <Layout>
+      <div className="register-container">
+        <h1>PrepStats</h1>
+        <img src="/logo.png" alt="PrepStats Logo" className="logo" />
+        <p className="slogan">Rise Up and Score Big!</p>
+        <form onSubmit={handleSubmit}>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+          <select value={role} onChange={(e) => setRole(e.target.value)}>
+            <option value="ATHLETE">Athlete</option>
+            <option value="COACH">Coach</option>
+            <option value="MEDIA">Media</option>
+            <option value="PARENT">Parent</option>
+            <option value="FAN">Fan</option>
+            <option value="ORGANIZATION">Organization</option>
+          </select>
+          <button type="submit">Sign Up</button>
+        </form>
+        <div className="login-link">
+          <p>Already have an account? <a href="/auth/login">Login</a></p>
+        </div>
+      </div>
+    </Layout>
   );
 };
 

@@ -4,16 +4,19 @@ import Layout from '../components/Layout';
 const Home = () => {
   return (
     <Layout>
-      <header className="hero">
-        <div className="logo-container">
-          <img src="/logo.png" alt="PrepStats Logo" className="logo" />
+      <header style={{ backgroundColor: '#ffffff', padding: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px' }}>
+          <button style={{ backgroundColor: '#b3a369', color: '#ffffff', padding: '5px 10px', borderRadius: '5px', fontFamily: 'Oswald, sans-serif' }}>SEARCH</button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button style={{ backgroundColor: '#b3a369', color: '#ffffff', padding: '10px 20px', borderRadius: '10px', fontFamily: 'Oswald, sans-serif' }}>SIGN IN</button>
+            <button style={{ backgroundColor: '#b3a369', color: '#ffffff', padding: '10px 20px', borderRadius: '10px', fontFamily: 'Oswald, sans-serif' }}>LEADERBOARD</button>
+            <button style={{ backgroundColor: '#b3a369', color: '#ffffff', padding: '10px 20px', borderRadius: '10px', fontFamily: 'Oswald, sans-serif' }}>POTW</button>
+            <button style={{ backgroundColor: '#b3a369', color: '#ffffff', padding: '10px 20px', borderRadius: '10px', fontFamily: 'Oswald, sans-serif' }}>POLLS</button>
+          </div>
         </div>
-        <h1 className="prepstats-title">PrepStats</h1>
-        <h2 className="heading">Rise Up and Score Big!</h2>
-        <p className="subtitle">Track your stats, vote for champs, and join the team.</p>
-        <div className="cta-buttons">
-          <a href="/auth/login" className="btn">Join the Game</a>
-          <a href="/auth/register" className="btn secondary">Sign Up Today</a>
+        <div style={{ textAlign: 'center', padding: '10px' }}>
+          <img src="/logo.png" alt="PrepStats Logo" style={{ width: '40px', verticalAlign: 'middle', marginRight: '10px' }} />
+          <span style={{ color: '#000000', fontSize: '24px', fontWeight: 'bold', fontFamily: 'Squada One, sans-serif' }}>PrepStats</span>
         </div>
       </header>
     </Layout>

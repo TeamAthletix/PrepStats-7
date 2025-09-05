@@ -1,41 +1,65 @@
 @import url('https://fonts.googleapis.com/css2?family=Squada+One&family=Oswald:wght@400;700&display=swap');
 
-.hero {
+.hero, .register-container {
   text-align: center;
   padding: 3rem 1rem;
-  background-color: #b3a369; /* Old Gold */
-  color: #000000; /* Black */
-}
-
-.logo-container {
-  margin-bottom: 1rem;
+  background-color: #000000; /* Black */
+  color: #ffffff; /* White */
 }
 
 .logo {
   max-width: 150px;
   height: auto;
-}
-
-.prepstats-title {
-  font-family: 'Squada One', sans-serif;
-  font-size: 3.5rem;
-  margin-bottom: 0.5rem;
-  color: #ffffff; /* White */
-}
-
-.heading {
-  font-family: 'Oswald', sans-serif;
-  font-weight: 700;
-  font-size: 2rem;
   margin-bottom: 1rem;
-  color: #000000; /* Black */
 }
 
-.subtitle {
+.slogan {
   font-family: 'Oswald', sans-serif;
   font-size: 1.2rem;
   margin-bottom: 1.5rem;
   color: #727272; /* Grey */
+}
+
+.register-container form {
+  display: inline-block;
+  text-align: left;
+}
+
+.register-container input, .register-container select {
+  display: block;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  width: 200px;
+}
+
+.register-container button {
+  display: block;
+  padding: 0.75rem 1.5rem;
+  margin-top: 1rem;
+  background-color: #b3a369; /* Old Gold */
+  color: #000000; /* Black */
+  border: none;
+  border-radius: 5px;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 400;
+}
+
+.register-container button:hover {
+  opacity: 0.9;
+}
+
+.login-link a {
+  color: #b3a369; /* Old Gold */
+  text-decoration: underline;
+}
+
+.login-link a:hover {
+  color: #ffffff; /* White on hover */
+}
+
+/* New styles for landing page CTA buttons */
+.cta-buttons {
+  margin-top: 1.5rem;
 }
 
 .cta-buttons .btn {
