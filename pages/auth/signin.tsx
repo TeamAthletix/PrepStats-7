@@ -16,46 +16,20 @@ export default function SignIn() {
     setLoading(true)
     setError('')
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
-      setLoading(false)
-      return
-    }
-
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          role: formData.role,
-          profileData: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            gradYear: formData.gradYear ? parseInt(formData.gradYear) : null,
-            position: formData.position,
-            school: formData.school,
-            teamId: formData.teamId || null
-          }
-        })
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
       })
 
-      if (response.ok) {
-        await signIn('credentials', {
-          email: formData.email,
-          password: formData.password,
-          redirect: false
-        })
-        router.push('/dashboard')
+      if (result?.error) {
+        setError('Invalid email or password')
       } else {
-        const data = await response.json()
-        setError(data.message || 'Registration failed')
+        router.push('/dashboard')
       }
     } catch (error) {
-      setError('Something went wrong')
+      setError('An error occurred during sign in')
     } finally {
       setLoading(false)
     }
@@ -63,106 +37,60 @@ export default function SignIn() {
 
   return (
     <Layout>
-      <div className="auth-container">
-        <div className="auth-form">
-          <img src="/logo.png" alt="PrepStats Logo" className="logo" />
-          <h1>Join PrepStats</h1>
-          <p className="slogan">Rise Up and Score Big!</p>
-          
-          {error && <div className="error-message">{error}</div>}
-          
-          <form onSubmit={handleSubmit}>
-            <div className="form-row">
-              <input
-                type="text"
-                name="firstName"
-                placeholder="First Name"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-              />
-              <input
-                type="text"
-                name="lastName"
-                placeholder="Last Name"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            
+      <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px' }}>
+        <h1 style={{ textAlign: 'center', marginBottom: '30px', fontFamily: 'Squada One, sans-serif', fontSize: '32px' }}>Sign In</h1>
+        
+        {error && (
+          <div style={{ backgroundColor: '#ffebee', color: '#c62828', padding: '10px', borderRadius: '5px', marginBottom: '20px', textAlign: 'center' }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Email:</label>
             <input
               type="email"
-              name="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={handleChange}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
+              style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' }}
             />
-            
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Password:</label>
             <input
               type="password"
-              name="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={handleChange}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
+              style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' }}
             />
-            
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm Password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-            />
-            
-            <select name="role" value={formData.role} onChange={handleChange}>
-              <option value="ATHLETE">Athlete</option>
-              <option value="COACH">Coach</option>
-              <option value="MEDIA">Media</option>
-              <option value="PARENT">Parent</option>
-              <option value="FAN">Fan</option>
-              <option value="ORGANIZATION">Organization</option>
-            </select>
-            
-            {formData.role === 'ATHLETE' && (
-              <>
-                <input
-                  type="number"
-                  name="gradYear"
-                  placeholder="Graduation Year"
-                  value={formData.gradYear}
-                  onChange={handleChange}
-                />
-                <input
-                  type="text"
-                  name="position"
-                  placeholder="Position"
-                  value={formData.position}
-                  onChange={handleChange}
-                />
-              </>
-            )}
-            
-            <input
-              type="text"
-              name="school"
-              placeholder="School"
-              value={formData.school}
-              onChange={handleChange}
-            />
-            
-            <button type="submit" disabled={loading} className="auth-button">
-              {loading ? 'Creating Account...' : 'Sign Up'}
-            </button>
-          </form>
-          
-          <p className="auth-link">
-            Already have an account? <Link href="/auth/signin">Sign in</Link>
-          </p>
-        </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '12px',
+              backgroundColor: '#b3a369',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              fontSize: '16px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontFamily: 'Oswald, sans-serif'
+            }}
+          >
+            {loading ? 'Signing In...' : 'Sign In'}
+          </button>
+        </form>
+
+        <p style={{ textAlign: 'center', marginTop: '20px' }}>
+          Don't have an account? <Link href="/auth/signup" style={{ color: '#b3a369', textDecoration: 'none' }}>Sign up</Link>
+        </p>
       </div>
     </Layout>
   )

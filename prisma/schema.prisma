@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -11,7 +11,7 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String?
-  role      Role     @default(ATHLETE)
+  role      String     @default("ATHLETE")
   tokens    Int      @default(0)
   isTrusted Boolean  @default(false)
   verified  Boolean  @default(false)
@@ -31,7 +31,7 @@ model Profile {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        ProfileType
+  type        String
   firstName   String
   lastName    String
   gradYear    Int?
@@ -59,7 +59,7 @@ model Team {
   name        String
   school      String
   state       String   @default("Alabama")
-  sport       Sport
+  sport       String
   season      String
   coachId     String?
   verified    Boolean  @default(false)
@@ -81,18 +81,18 @@ model Stat {
   profile         Profile  @relation(fields: [profileId], references: [id])
   teamId          String?
   team            Team?    @relation(fields: [teamId], references: [id])
-  sport           Sport
+  sport           String
   gameDate        DateTime
   opponent        String
   season          String
   week            Int?
   isHome          Boolean  @default(true)
   gameResult      String?
-  metrics         Json
+  metrics         String
   mediaLink       String?
   verified        Boolean  @default(false)
   verifiedBy      String?
-  verifierRole    Role?
+  verifierRole    String?
   createdBy       String
   submissionCount Int      @default(0)
   createdAt       DateTime @default(now())
@@ -125,7 +125,7 @@ model TokenTransaction {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id])
-  type        TransactionType
+  type        String
   amount      Int
   description String
   stripeId    String?
@@ -138,7 +138,7 @@ model Award {
   id          String   @id @default(cuid())
   name        String
   description String?
-  sport       Sport
+  sport       String
   week        Int?
   season      String
   winnerId    String?
@@ -173,14 +173,14 @@ model Poster {
   school       String
   position     String?
   customText   String?
-  statsData    Json
-  teamColors   Json
+  statsData    String
+  teamColors   String
   teamLogo     String?
   
   hasVerifiedStats Boolean @default(false)
-  verifiedStatIds  String[]
+  verifiedStatIds  String
   
-  status       PosterStatus @default(PENDING)
+  status       String @default("PENDING")
   imageUrl     String?
   previewUrl   String?
   
@@ -199,47 +199,7 @@ model Poster {
   @@map("posters")
 }
 
-enum Role {
-  ATHLETE
-  COACH
-  MEDIA
-  PARENT
-  FAN
-  ORGANIZATION
-  ADMIN
-}
 
-enum ProfileType {
-  ATHLETE
-  COACH
-  MEDIA
-  PARENT
-  FAN
-  ORGANIZATION
-}
 
-enum Sport {
-  FOOTBALL
-  GIRLS_FLAG_FOOTBALL
-  BASKETBALL
-  BASEBALL
-  SOFTBALL
-  SOCCER
-  TRACK
-  WRESTLING
-}
 
-enum TransactionType {
-  PURCHASE
-  EARNED
-  SPENT
-  REFUND
-}
 
-enum PosterStatus {
-  PENDING
-  GENERATING
-  COMPLETED
-  FAILED
-  FLAGGED
-}
