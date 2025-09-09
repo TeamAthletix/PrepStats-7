@@ -11,7 +11,7 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String?
-  role      String     @default("ATHLETE")
+  role      String   @default("ATHLETE")
   tokens    Int      @default(0)
   isTrusted Boolean  @default(false)
   verified  Boolean  @default(false)
@@ -19,6 +19,7 @@ model User {
   updatedAt DateTime @updatedAt
   
   profiles          Profile[]
+  schoolRequests    SchoolRequest[]
   stats             Stat[]
   tokenTransactions TokenTransaction[]
   spotlights        Spotlight[]
@@ -38,7 +39,8 @@ model Profile {
   position    String?
   teamId      String?
   team        Team?    @relation(fields: [teamId], references: [id])
-  school      String?
+  schoolId    String?
+  school      School?  @relation(fields: [schoolId], references: [id])
   outlet      String?
   affiliation String?
   bio         String?
@@ -52,6 +54,42 @@ model Profile {
   spotlights  Spotlight[]
   
   @@map("profiles")
+}
+
+model School {
+  id            String   @id @default(cuid())
+  name          String
+  city          String
+  state         String
+  classification String?
+  verified      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt @default(now())
+
+  profiles       Profile[]
+  schoolRequests SchoolRequest[]
+
+  @@unique([name, city, state])
+  @@map("schools")
+}
+
+model SchoolRequest {
+  id          String   @id @default(cuid())
+  schoolName  String
+  city        String
+  state       String
+  classification String?
+  requestedBy String
+  status      String   @default("pending")
+  adminNotes  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  school      School?  @relation(fields: [schoolId], references: [id])
+  schoolId    String?
+  user        User     @relation(fields: [requestedBy], references: [id])
+
+  @@map("school_requests")
 }
 
 model Team {
@@ -198,8 +236,3 @@ model Poster {
   
   @@map("posters")
 }
-
-
-
-
-

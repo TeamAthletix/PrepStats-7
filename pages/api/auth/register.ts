@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import bcrypt from 'bcryptjs'
-import prisma from '../../../lib/prisma'
+import bcrypt from 'bcrypt'
+import { PrismaClient } from '@prisma/client'
+
+const prisma = new PrismaClient()
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -30,12 +32,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             type: role,
             firstName: profileData.firstName,
             lastName: profileData.lastName,
-            gradYear: profileData.gradYear,
+            gradYear: profileData.gradYear ? parseInt(profileData.gradYear) : null,
             position: profileData.position,
-            school: profileData.school,
-            team: profileData.teamId ? {
-              connect: { id: profileData.teamId }
-            } : undefined
+            school: profileData.school
           }
         }
       },
@@ -45,7 +44,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     const { password: _, ...userWithoutPassword } = user
-    res.status(201).json({ user: userWithoutPassword })
+    res.status(201).json({ 
+      user: userWithoutPassword,
+      autoLogin: true 
+    })
   } catch (error) {
     console.error('Registration error:', error)
     res.status(500).json({ message: 'Internal server error' })

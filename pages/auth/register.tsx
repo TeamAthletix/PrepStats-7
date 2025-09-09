@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import prisma from '../../lib/prisma';
 import Layout from '../../components/Layout';
 
