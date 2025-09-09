@@ -268,7 +268,7 @@ export default function SchoolSelect({
                 </label>
                 <select
                   value={requestForm.state}
-                  onChange={(e) => setRequestForm(prev => ({ ...prev, state: e.target.value }))}
+                  onChange={(e) => setRequestForm(prev => ({ ...prev, state: e.target.value as "AL" | "GA" }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   required
                 >

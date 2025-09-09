@@ -1,5 +1,5 @@
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../pages/api/auth/[...nextauth]'
+import authOptions from '../pages/api/auth/[...nextauth]'
 import { NextApiRequest, NextApiResponse } from 'next'
 
 export async function requireAuth(req: NextApiRequest, res: NextApiResponse, roles?: string[]) {
