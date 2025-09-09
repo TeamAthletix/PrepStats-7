@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireAuth } from '../../../lib/auth'
-import { prisma } from '../../../lib/prisma'
+import prisma from '../../../lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -11,21 +11,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!session) return
 
   try {
-    const [totalUsers, pendingVerifications, totalStats, activeSpotlights] = await Promise.all([
-      prisma.user.count(),
-      prisma.stat.count({ where: { verified: false } }),
-      prisma.stat.count(),
-      prisma.spotlight.count({ where: { active: true } })
-    ])
-
-    res.json({
-      totalUsers,
-      pendingVerifications,
-      totalStats,
-      activeSpotlights
+    const stats = await prisma.stat.findMany({
+      include: {
+        user: {
+          select: {
+            email: true,
+            verified: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      take: 100
     })
+
+    res.status(200).json({ stats })
+
   } catch (error) {
-    console.error('Error fetching admin stats:', error)
+    console.error('Admin stats error:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

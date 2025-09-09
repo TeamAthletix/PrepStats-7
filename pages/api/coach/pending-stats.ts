@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { requireAuth } from '../../../lib/auth'
-import { prisma } from '../../../lib/prisma'
+import prisma from '../../../lib/prisma'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -11,19 +11,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!session) return
 
   try {
-    const stats = await prisma.stat.findMany({
+    const pendingStats = await prisma.stat.findMany({
       where: {
         verified: false
       },
       include: {
-        profile: {
-          include: {
-            team: true
-          }
-        },
         user: {
           select: {
-            email: true
+            email: true,
+            profiles: true
           }
         }
       },
@@ -32,9 +28,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     })
 
-    res.json({ stats })
+    res.status(200).json({ stats: pendingStats })
+
   } catch (error) {
-    console.error('Error fetching pending stats:', error)
+    console.error('Pending stats error:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
 }

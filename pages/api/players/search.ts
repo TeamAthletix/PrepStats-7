@@ -44,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         slug: slug,
         firstName: profile.firstName,
         lastName: profile.lastName,
-        school: profile.school || 'No School',
+        school: profile.schoolId || 'No School',
         position: profile.position || 'No Position',
         graduationYear: profile.gradYear,
         bio: profile.bio,

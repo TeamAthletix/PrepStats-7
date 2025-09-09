@@ -1,28 +1,34 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { PrismaClient } from '@prisma/client'
+import prisma from '../../../lib/prisma'
 
-const prisma = new PrismaClient()
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method not allowed' })
+    return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const { q, state, limit = 10 } = req.query
+    const {
+      query = '',
+      state = 'Alabama',
+      classification,
+      limit = 20
+    } = req.query
 
-    if (!q || typeof q !== 'string') {
-      return res.status(400).json({ message: 'Query parameter "q" is required' })
+    const searchQuery = query.toString().trim().toLowerCase()
+    const limitNum = Math.min(parseInt(limit.toString()), 50)
+
+    const where: any = {}
+
+    if (state && state !== 'all') {
+      where.state = state.toString()
     }
 
-    // Build search conditions for SQLite (case-insensitive search)
-    const searchQuery = q.toLowerCase()
-    
-    let whereCondition: any = {
-      OR: [
+    if (classification && classification !== 'all') {
+      where.classification = classification.toString()
+    }
+
+    if (searchQuery) {
+      where.OR = [
         {
           name: {
             contains: searchQuery
@@ -36,31 +42,51 @@ export default async function handler(
       ]
     }
 
-    // Add state filter if provided
-    if (state && typeof state === 'string' && state !== 'ALL') {
-      whereCondition.state = state
-    }
-
     const schools = await prisma.school.findMany({
-      where: whereCondition,
+      where,
       select: {
         id: true,
         name: true,
         city: true,
         state: true,
-        classification: true
+        classification: true,
+        district: true,
+        verified: true
       },
-      orderBy: {
-        name: 'asc'
-      },
-      take: parseInt(limit as string)
+      orderBy: [
+        { verified: 'desc' },
+        { name: 'asc' }
+      ],
+      take: limitNum
     })
 
-    res.status(200).json({ schools })
+    const formattedSchools = schools.map(school => ({
+      id: school.id,
+      name: school.name,
+      city: school.city,
+      state: school.state,
+      classification: school.classification,
+      district: school.district,
+      verified: school.verified,
+      displayName: `${school.name} - ${school.city}, ${school.state}`,
+      label: school.classification 
+        ? `${school.name} (${school.classification}) - ${school.city}`
+        : `${school.name} - ${school.city}`
+    }))
+
+    res.status(200).json({
+      schools: formattedSchools,
+      total: formattedSchools.length,
+      hasMore: formattedSchools.length === limitNum,
+      searchQuery,
+      filters: {
+        state,
+        classification
+      }
+    })
+
   } catch (error) {
     console.error('School search error:', error)
-    res.status(500).json({ message: 'Internal server error' })
-  } finally {
-    await prisma.$disconnect()
+    res.status(500).json({ error: 'Failed to search schools' })
   }
 }

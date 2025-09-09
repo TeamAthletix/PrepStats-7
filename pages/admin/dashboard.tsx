@@ -8,9 +8,9 @@ export default AdminDashboard;
 
 import { getSession } from 'next-auth/react';
 
-export async function getServerSideProps(context) {
+export async function getServerSideProps(context: any) {
   const session = await getSession(context);
-  if (!session || session.user.role !== 'ADMIN') {
+  if (!session || (session.user as any)?.role !== 'ADMIN') {
     return { redirect: { destination: '/auth/login', permanent: false } };
   }
   return { props: {} };

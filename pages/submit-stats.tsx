@@ -52,7 +52,7 @@ export default function SubmitStats() {
       router.push('/auth/signin?callbackUrl=/submit-stats')
       return
     }
-    if (session.user.role !== 'athlete') {
+    if ((session.user as any)?.role !== 'athlete') {
       router.push('/dashboard?error=Only athletes can submit stats')
       return
     }
@@ -115,7 +115,7 @@ export default function SubmitStats() {
     return <div style={{ padding: '50px', textAlign: 'center' }}>Loading...</div>
   }
 
-  if (!session || session.user.role !== 'athlete') {
+  if (!session || (session.user as any)?.role !== 'athlete') {
     return null
   }
 

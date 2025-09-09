@@ -1,9 +1,9 @@
-import NextAuth from 'next-auth'
+import NextAuth, { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcrypt'
 import prisma from '../../../lib/prisma'
 
-export default NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -16,55 +16,76 @@ export default NextAuth({
           return null
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-          include: { profiles: true }
-        })
+        try {
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email.toLowerCase() },
+            include: { 
+              profiles: true 
+            }
+          })
 
-        if (!user || !user.password) {
+          if (!user || !user.password) {
+            return null
+          }
+
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+          if (!isPasswordValid) {
+            return null
+          }
+
+          // Update last active timestamp
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { lastActive: new Date() }
+          })
+
+          return {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            tokenBalance: user.tokenBalance,
+            subscriptionTier: user.subscriptionTier,
+            verified: user.verified,
+            profiles: user.profiles
+          }
+        } catch (error) {
+          console.error('Authorization error:', error)
           return null
-        }
-
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
-
-        if (!isPasswordValid) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          tokens: user.tokens,
-          profiles: user.profiles
         }
       }
     })
   ],
   session: {
-    strategy: 'jwt'
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role
-        token.tokens = user.tokens
-        token.profiles = user.profiles
+        token.role = (user as any).role
+        token.tokenBalance = (user as any).tokenBalance
+        token.subscriptionTier = (user as any).subscriptionTier
+        token.verified = (user as any).verified
+        token.profiles = (user as any).profiles
       }
       return token
     },
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.sub
-        session.user.role = token.role
-        session.user.tokens = token.tokens
-        session.user.profiles = token.profiles
+      if (token && session.user) {
+        (session.user as any).id = token.sub
+        ;(session.user as any).role = token.role
+        ;(session.user as any).tokenBalance = token.tokenBalance
+        ;(session.user as any).subscriptionTier = token.subscriptionTier
+        ;(session.user as any).verified = token.verified
+        ;(session.user as any).profiles = token.profiles
       }
       return session
     }
   },
   pages: {
     signIn: '/auth/signin',
-    signUp: '/auth/signup'
+    error: '/auth/error'
   }
-})
+}
+
+export default NextAuth(authOptions)

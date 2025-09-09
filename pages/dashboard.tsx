@@ -18,7 +18,7 @@ export default function Dashboard() {
     }
 
     // Case-insensitive role check
-    if (session.user.role?.toLowerCase() === 'athlete') {
+    if ((session.user as any)?.role?.toLowerCase() === 'athlete') {
       fetchRecentStats()
     } else {
       setLoading(false)
@@ -55,7 +55,7 @@ export default function Dashboard() {
 
   if (!session) return null
 
-  const isAthlete = session.user.role?.toLowerCase() === 'athlete'
+  const isAthlete = (session.user as any)?.role?.toLowerCase() === 'athlete'
 
   return (
     <div style={{ 
@@ -77,7 +77,7 @@ export default function Dashboard() {
                 Welcome back, {session.user.firstName}!
               </h1>
               <p style={{ color: '#666', margin: 0, fontSize: '16px' }}>
-                Role: {session.user.role?.charAt(0).toUpperCase() + session.user.role?.slice(1).toLowerCase()}
+                Role: {(session.user as any)?.role?.charAt(0).toUpperCase() + (session.user as any)?.role?.slice(1).toLowerCase()}
                 {session.user.schoolName && ` • ${session.user.schoolName}`}
               </p>
             </div>

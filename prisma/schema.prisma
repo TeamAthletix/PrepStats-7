@@ -1,3 +1,6 @@
+// PrepStats Complete Database Schema
+// Supports: Token economy, AI posters, voting, subscriptions, verification workflows
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,194 +10,352 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================================
+// USER MANAGEMENT & AUTHENTICATION
+// ============================================================================
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String?
-  role      String   @default("ATHLETE")
-  tokens    Int      @default(0)
-  isTrusted Boolean  @default(false)
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String?
+  role              String   // ATHLETE, COACH, PARENT, MEDIA, ADMIN, BUSINESS
+  verified          Boolean  @default(false)
+  verifiedAt        DateTime?
+  verificationData  String?  // JSON: {school_email, letterhead, nfhs_id}
   
+  // Location & Context
+  state             String   @default("Alabama")
+  location          String?
+  
+  // Token System
+  tokenBalance      Int      @default(0)
+  subscriptionTier  String   @default("FREE") // FREE, STARTER, PRO, ELITE
+  subscriptionId    String?  // Stripe subscription ID
+  subscriptionEnds  DateTime?
+  
+  // Metadata
+  lastActive        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
   profiles          Profile[]
-  schoolRequests    SchoolRequest[]
-  stats             Stat[]
   tokenTransactions TokenTransaction[]
+  coachVerifications CoachVerification[]
+  createdStats      Stat[] @relation("StatCreator")
+  verifiedStats     Stat[] @relation("StatVerifier") 
   spotlights        Spotlight[]
+  votes             Vote[]
+  awards            Award[]
   posters           Poster[]
+  parentLinks       ParentLink[]
   
   @@map("users")
 }
 
 model Profile {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String
-  firstName   String
-  lastName    String
-  gradYear    Int?
-  position    String?
-  teamId      String?
-  team        Team?    @relation(fields: [teamId], references: [id])
-  schoolId    String?
-  school      School?  @relation(fields: [schoolId], references: [id])
-  outlet      String?
-  affiliation String?
-  bio         String?
-  avatar      String?
-  placeholder Boolean  @default(false)
-  public      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  stats       Stat[]
-  spotlights  Spotlight[]
+  // Basic Info
+  firstName       String
+  lastName        String
+  graduationYear  Int?
+  position        String?  // JSON array for multiple positions
+  jerseyNumber    Int?
+  
+  // Physical Stats
+  height          String?
+  weight          String?
+  speed40         String?  // 40-yard dash time
+  
+  // Academic
+  gpa             Float?
+  satScore        Int?
+  actScore        Int?
+  
+  // School & Team
+  schoolId        String?
+  school          School?  @relation(fields: [schoolId], references: [id])
+  teamId          String?
+  team            Team?    @relation(fields: [teamId], references: [id])
+  
+  // Profile Content
+  bio             String?
+  avatar          String?  // Image URL
+  bannerImage     String?
+  highlights      String?  // JSON array of video/image URLs
+  
+  // Settings
+  public          Boolean  @default(true)
+  verified        Boolean  @default(false)
+  
+  // Metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  stats           Stat[]
+  spotlights      Spotlight[]
+  nominations     Nomination[]
+  votes           Vote[]
+  posters         Poster[]
   
   @@map("profiles")
 }
 
+model ParentLink {
+  id          String   @id @default(cuid())
+  parentId    String
+  parent      User     @relation(fields: [parentId], references: [id])
+  athleteCode String   // Code for athlete to approve parent
+  approved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  @@map("parent_links")
+}
+
+// ============================================================================
+// SCHOOLS & TEAMS
+// ============================================================================
+
 model School {
-  id            String   @id @default(cuid())
-  name          String
-  city          String
-  state         String
-  classification String?
-  verified      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt @default(now())
-
+  id             String   @id @default(cuid())
+  name           String
+  city           String
+  state          String
+  classification String?  // 1A, 2A, 3A, etc.
+  district       String?
+  
+  // Contact Info
+  address        String?
+  phone          String?
+  website        String?
+  
+  // Verification
+  verified       Boolean  @default(false)
+  
+  // Metadata
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  teams          Team[]
   profiles       Profile[]
-  schoolRequests SchoolRequest[]
-
+  coaches        CoachVerification[]
+  
   @@unique([name, city, state])
   @@map("schools")
 }
 
-model SchoolRequest {
-  id          String   @id @default(cuid())
-  schoolName  String
-  city        String
-  state       String
-  classification String?
-  requestedBy String
-  status      String   @default("pending")
-  adminNotes  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  school      School?  @relation(fields: [schoolId], references: [id])
-  schoolId    String?
-  user        User     @relation(fields: [requestedBy], references: [id])
-
-  @@map("school_requests")
-}
-
 model Team {
   id          String   @id @default(cuid())
-  name        String
-  school      String
-  state       String   @default("Alabama")
-  sport       String
-  season      String
-  coachId     String?
+  name        String   // e.g., "Varsity Football"
+  sport       String   // FOOTBALL, GIRLS_FLAG_FOOTBALL, etc.
+  season      String   // "2024", "2024-2025"
+  division    String?  // JV, Varsity, etc.
+  
+  // School Association
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id])
+  
+  // Coach Management
+  headCoachId String?
+  coachIds    String?  // JSON array of coach user IDs
+  
+  // Team Stats
+  wins        Int      @default(0)
+  losses      Int      @default(0)
+  ties        Int      @default(0)
+  
+  // Metadata
   verified    Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
+  // Relations
   profiles    Profile[]
   stats       Stat[]
+  games       Game[]
   
-  @@unique([school, sport, season])
+  @@unique([schoolId, sport, season, division])
   @@map("teams")
 }
 
+// ============================================================================
+// STATS & VERIFICATION
+// ============================================================================
+
 model Stat {
   id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
+  
+  // Ownership
+  createdById     String
+  createdBy       User     @relation("StatCreator", fields: [createdById], references: [id])
   profileId       String
   profile         Profile  @relation(fields: [profileId], references: [id])
   teamId          String?
   team            Team?    @relation(fields: [teamId], references: [id])
+  
+  // Game Context
   sport           String
   gameDate        DateTime
   opponent        String
   season          String
   week            Int?
   isHome          Boolean  @default(true)
-  gameResult      String?
-  metrics         String
-  mediaLink       String?
+  gameResult      String?  // W, L, T with score
+  
+  // Stats Data
+  metrics         String   // JSON object of stat values
+  mediaLink       String?  // Video/photo evidence
+  
+  // Verification
   verified        Boolean  @default(false)
-  verifiedBy      String?
-  verifierRole    String?
-  createdBy       String
-  submissionCount Int      @default(0)
+  verifiedAt      DateTime?
+  verifiedById    String?
+  verifiedBy      User?    @relation("StatVerifier", fields: [verifiedById], references: [id])
+  verificationNote String?
+  
+  // Metadata
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
   @@map("stats")
 }
 
-model Spotlight {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  profileId   String
-  profile     Profile  @relation(fields: [profileId], references: [id])
-  title       String
-  description String
-  imageUrl    String?
-  startDate   DateTime
-  endDate     DateTime
-  cost        Int
-  approved    Boolean  @default(false)
-  active      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+model Game {
+  id           String   @id @default(cuid())
+  homeTeamId   String
+  homeTeam     Team     @relation(fields: [homeTeamId], references: [id])
+  awayTeam     String   // Opponent name
+  gameDate     DateTime
+  season       String
+  week         Int?
   
-  @@map("spotlights")
+  // Game Details
+  homeScore    Int?
+  awayScore    Int?
+  status       String   @default("SCHEDULED") // SCHEDULED, LIVE, FINAL
+  
+  // Box Score Data
+  boxScore     String?  // JSON with detailed stats
+  
+  // Metadata
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@map("games")
 }
 
+// ============================================================================
+// TOKEN ECONOMY
+// ============================================================================
+
 model TokenTransaction {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  type        String
-  amount      Int
-  description String
-  stripeId    String?
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  // Transaction Details
+  type          String   // EARNED, SPENT, PURCHASED, REFUNDED
+  amount        Int      // Positive for earned/purchased, negative for spent
+  balance       Int      // Token balance after transaction
+  
+  // Context
+  source        String   // STAT_ENTRY, VERIFICATION, SPOTLIGHT, VOTE, PURCHASE
+  sourceId      String?  // ID of related record (stat, spotlight, etc.)
+  description   String
+  
+  // Stripe Integration (for purchases)
+  stripePaymentId String?
+  
+  // Metadata
+  createdAt     DateTime @default(now())
   
   @@map("token_transactions")
 }
 
-model Award {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  sport       String
-  week        Int?
-  season      String
-  winnerId    String?
-  createdBy   String
-  createdAt   DateTime @default(now())
+model Subscription {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  tier              String   // STARTER, PRO, ELITE
+  stripeSubscriptionId String @unique
+  status            String   // active, canceled, past_due
   
-  @@map("awards")
+  // Billing
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean @default(false)
+  
+  // Metadata
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("subscriptions")
 }
+
+// ============================================================================
+// SPOTLIGHT SYSTEM
+// ============================================================================
+
+model Spotlight {
+  id          String   @id @default(cuid())
+  
+  // Ownership
+  purchasedById String
+  purchasedBy   User     @relation(fields: [purchasedById], references: [id])
+  profileId     String
+  profile       Profile  @relation(fields: [profileId], references: [id])
+  
+  // Content
+  title         String
+  description   String?
+  image         String?  // Uploaded image URL
+  
+  // Scheduling
+  startDate     DateTime
+  endDate       DateTime
+  active        Boolean  @default(false)
+  
+  // Payment
+  tokenCost     Int
+  transactionId String?  // Reference to token transaction
+  stripePaymentId String?
+  
+  // Moderation
+  approved      Boolean  @default(false)
+  moderatedAt   DateTime?
+  moderatorNote String?
+  
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("spotlights")
+}
+
+// ============================================================================
+// AI POSTER SYSTEM
+// ============================================================================
 
 model PosterTemplate {
   id          String   @id @default(cuid())
   name        String
-  displayName String
   description String?
-  basePrice   Int
+  
+  // Template Configuration
+  templateData String  // JSON with layout, fonts, positions
+  sport       String?  // Sport-specific templates
+  tier        String   @default("FREE") // FREE, STARTER, PRO, ELITE
+  
+  // Metadata
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
+  // Relations
   posters     Poster[]
   
   @@map("poster_templates")
@@ -202,37 +363,179 @@ model PosterTemplate {
 
 model Poster {
   id           String   @id @default(cuid())
+  
+  // Ownership
   userId       String
   user         User     @relation(fields: [userId], references: [id])
+  profileId    String
+  profile      Profile  @relation(fields: [profileId], references: [id])
+  
+  // Template & Generation
   templateId   String
   template     PosterTemplate @relation(fields: [templateId], references: [id])
+  generatedUrl String?  // URL to generated poster image
   
-  playerName   String
-  school       String
-  position     String?
-  customText   String?
-  statsData    String
-  teamColors   String
-  teamLogo     String?
+  // Configuration
+  customData   String?  // JSON with user customizations
+  tokenCost    Int      @default(0)
   
-  hasVerifiedStats Boolean @default(false)
-  verifiedStatIds  String
+  // Status
+  status       String   @default("PENDING") // PENDING, GENERATING, COMPLETED, FAILED
+  errorMessage String?
   
-  status       String @default("PENDING")
-  imageUrl     String?
-  previewUrl   String?
-  
-  flagged      Boolean @default(false)
-  flagReason   String?
-  adminReviewed Boolean @default(false)
-  adminApproved Boolean @default(false)
-  
-  tokensCost   Int
-  purchased    Boolean @default(false)
-  purchasedAt  DateTime?
-  
+  // Metadata
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   
   @@map("posters")
+}
+
+// ============================================================================
+// AWARDS & VOTING SYSTEM
+// ============================================================================
+
+model Award {
+  id           String   @id @default(cuid())
+  
+  // Award Details
+  title        String   // "Player of the Week", "Defensive MVP"
+  description  String?
+  type         String   // PLAYER_OF_WEEK, CUSTOM
+  
+  // Scope
+  sport        String
+  state        String
+  week         Int?     // For weekly awards
+  season       String
+  
+  // Management
+  createdById  String
+  createdBy    User     @relation(fields: [createdById], references: [id])
+  
+  // Status
+  status       String   @default("ACTIVE") // ACTIVE, CLOSED, ARCHIVED
+  featured     Boolean  @default(false)  // Paid featured upgrade
+  
+  // Voting Configuration  
+  votingEnds   DateTime?
+  tokenCostPerVote Int @default(1)
+  maxVotesPerUser  Int @default(10)
+  
+  // Metadata
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  nominations  Nomination[]
+  votes        Vote[]
+  
+  @@map("awards")
+}
+
+model Nomination {
+  id        String   @id @default(cuid())
+  awardId   String
+  award     Award    @relation(fields: [awardId], references: [id])
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  
+  // Nomination Details
+  reason    String?
+  tokenCost Int      @default(0) // Cost to nominate
+  
+  // Vote Tracking
+  voteCount Int      @default(0)
+  
+  // Metadata
+  createdAt DateTime @default(now())
+  
+  // Relations
+  votes     Vote[]
+  
+  @@unique([awardId, profileId])
+  @@map("nominations")
+}
+
+model Vote {
+  id           String   @id @default(cuid())
+  
+  // Voting Context
+  awardId      String
+  award        Award    @relation(fields: [awardId], references: [id])
+  nominationId String
+  nomination   Nomination @relation(fields: [nominationId], references: [id])
+  
+  // Voter
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  profileId    String
+  profile      Profile  @relation(fields: [profileId], references: [id])
+  
+  // Vote Details
+  voteCount    Int      @default(1) // Number of votes (can buy multiple)
+  tokenCost    Int      // Total tokens spent
+  
+  // Metadata
+  createdAt    DateTime @default(now())
+  
+  @@unique([awardId, userId]) // One vote record per award per user
+  @@map("votes")
+}
+
+// ============================================================================
+// VERIFICATION & ADMIN
+// ============================================================================
+
+model CoachVerification {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  schoolId      String?
+  school        School?  @relation(fields: [schoolId], references: [id])
+  
+  // Verification Documents
+  schoolEmail   String?
+  nfhsId        String?
+  letterhead    String?  // Document URL
+  
+  // Status
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedAt    DateTime?
+  reviewerNote  String?
+  
+  // Metadata
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("coach_verifications")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  // User who performed action
+  action    String   // STAT_VERIFIED, USER_APPROVED, etc.
+  resource  String   // Table name
+  resourceId String  // Record ID
+  oldData   String?  // JSON of previous state
+  newData   String?  // JSON of new state
+  metadata  String?  // Additional context
+  
+  createdAt DateTime @default(now())
+  
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// SYSTEM CONFIGURATION
+// ============================================================================
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   // JSON value
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("system_config")
 }
