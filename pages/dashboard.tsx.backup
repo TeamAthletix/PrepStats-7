@@ -1,0 +1,332 @@
+import { useSession, signOut } from 'next-auth/react'
+import { useRouter } from 'next/router'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+
+export default function Dashboard() {
+  const { data: session, status } = useSession()
+  const router = useRouter()
+  const [recentStats, setRecentStats] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (status === 'loading') return
+    
+    if (!session) {
+      router.push('/auth/signin')
+      return
+    }
+
+    // FIXED: Automatic role-based routing
+    const userRole = (session.user as any)?.role?.toUpperCase()
+    
+    if (userRole === 'ATHLETE') {
+      router.push('/athlete/dashboard')
+      return
+    } else if (userRole === 'COACH') {
+      router.push('/coach/dashboard')
+      return
+    } else if (userRole === 'ADMIN') {
+      router.push('/admin/dashboard')
+      return
+    } else if (userRole === 'PARENT') {
+      router.push('/parent/dashboard')
+      return
+    }
+
+    // If no specific role redirect, continue with current dashboard logic
+    if (userRole === 'ATHLETE') {
+      fetchRecentStats()
+    } else {
+      setLoading(false)
+    }
+  }, [session, status, router])
+
+  const fetchRecentStats = async () => {
+    try {
+      const response = await fetch('/api/stats/recent')
+      if (response.ok) {
+        const stats = await response.json()
+        setRecentStats(stats)
+      }
+    } catch (error) {
+      console.error('Error fetching recent stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (status === 'loading' || loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        fontFamily: 'Squada One, sans-serif'
+      }}>
+        <div>
+          <div style={{ 
+            border: '4px solid #f3f3f3',
+            borderTop: '4px solid #3498db',
+            borderRadius: '50%',
+            width: '40px',
+            height: '40px',
+            animation: 'spin 2s linear infinite',
+            margin: '0 auto 20px'
+          }}></div>
+          <p>Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return null // Will redirect to signin
+  }
+
+  const userRole = (session.user as any)?.role
+
+  return (
+    <div style={{ 
+      maxWidth: '1200px', 
+      margin: '0 auto', 
+      padding: '20px',
+      fontFamily: 'Squada One, sans-serif'
+    }}>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '30px',
+        borderBottom: '2px solid #e0e0e0',
+        paddingBottom: '20px'
+      }}>
+        <h1 style={{ 
+          fontSize: '36px', 
+          margin: 0,
+          background: 'linear-gradient(45deg, #FF6B6B, #4ECDC4)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent'
+        }}>
+          PrepStats Dashboard
+        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <span style={{ fontSize: '18px', color: '#666' }}>
+            Welcome, {session.user?.email}
+          </span>
+          <span style={{ 
+            backgroundColor: '#4ECDC4', 
+            color: 'white', 
+            padding: '5px 10px', 
+            borderRadius: '20px',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            {userRole}
+          </span>
+          <button
+            onClick={() => signOut()}
+            style={{
+              backgroundColor: '#FF6B6B',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontFamily: 'Squada One, sans-serif'
+            }}
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+
+      {/* Dashboard Content Based on Role */}
+      {userRole === 'ATHLETE' && (
+        <div>
+          <h2 style={{ fontSize: '24px', marginBottom: '20px' }}>Athlete Dashboard</h2>
+          <p style={{ fontSize: '16px', color: '#666', marginBottom: '20px' }}>
+            Redirecting to your athlete dashboard...
+          </p>
+        </div>
+      )}
+
+      {userRole === 'COACH' && (
+        <div>
+          <h2 style={{ fontSize: '24px', marginBottom: '20px' }}>Coach Dashboard</h2>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '20px' 
+          }}>
+            <div style={{ 
+              backgroundColor: '#f8f9fa', 
+              padding: '20px', 
+              borderRadius: '10px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#4ECDC4' }}>Team Management</h3>
+              <p>Manage your team roster and player information.</p>
+              <Link href="/coach/team">
+                <a style={{ 
+                  color: '#FF6B6B', 
+                  textDecoration: 'none',
+                  fontWeight: 'bold'
+                }}>
+                  View Team →
+                </a>
+              </Link>
+            </div>
+            
+            <div style={{ 
+              backgroundColor: '#f8f9fa', 
+              padding: '20px', 
+              borderRadius: '10px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#4ECDC4' }}>Verify Stats</h3>
+              <p>Review and verify submitted player statistics.</p>
+              <Link href="/coach/verify">
+                <a style={{ 
+                  color: '#FF6B6B', 
+                  textDecoration: 'none',
+                  fontWeight: 'bold'
+                }}>
+                  Verify Stats →
+                </a>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {userRole === 'ADMIN' && (
+        <div>
+          <h2 style={{ fontSize: '24px', marginBottom: '20px' }}>Admin Dashboard</h2>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '20px' 
+          }}>
+            <div style={{ 
+              backgroundColor: '#f8f9fa', 
+              padding: '20px', 
+              borderRadius: '10px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#4ECDC4' }}>User Management</h3>
+              <p>Manage user accounts and permissions.</p>
+              <Link href="/admin/users">
+                <a style={{ 
+                  color: '#FF6B6B', 
+                  textDecoration: 'none',
+                  fontWeight: 'bold'
+                }}>
+                  Manage Users →
+                </a>
+              </Link>
+            </div>
+            
+            <div style={{ 
+              backgroundColor: '#f8f9fa', 
+              padding: '20px', 
+              borderRadius: '10px',
+              border: '1px solid #e9ecef'
+            }}>
+              <h3 style={{ marginTop: 0, color: '#4ECDC4' }}>System Overview</h3>
+              <p>View system statistics and performance.</p>
+              <Link href="/admin/overview">
+                <a style={{ 
+                  color: '#FF6B6B', 
+                  textDecoration: 'none',
+                  fontWeight: 'bold'
+                }}>
+                  View Overview →
+                </a>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {userRole === 'PARENT' && (
+        <div>
+          <h2 style={{ fontSize: '24px', marginBottom: '20px' }}>Parent Dashboard</h2>
+          <div style={{ 
+            backgroundColor: '#f8f9fa', 
+            padding: '20px', 
+            borderRadius: '10px',
+            border: '1px solid #e9ecef'
+          }}>
+            <h3 style={{ marginTop: 0, color: '#4ECDC4' }}>My Athletes</h3>
+            <p>View your child's statistics and progress.</p>
+            <Link href="/parent/athletes">
+              <a style={{ 
+                color: '#FF6B6B', 
+                textDecoration: 'none',
+                fontWeight: 'bold'
+              }}>
+                View Athletes →
+              </a>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Links */}
+      <div style={{ marginTop: '40px' }}>
+        <h3 style={{ fontSize: '20px', marginBottom: '15px' }}>Quick Links</h3>
+        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+          <Link href="/submit-stats">
+            <a style={{ 
+              backgroundColor: '#4ECDC4',
+              color: 'white',
+              padding: '10px 15px',
+              textDecoration: 'none',
+              borderRadius: '5px',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              Submit Stats
+            </a>
+          </Link>
+          <Link href="/player">
+            <a style={{ 
+              backgroundColor: '#FF6B6B',
+              color: 'white',
+              padding: '10px 15px',
+              textDecoration: 'none',
+              borderRadius: '5px',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              Player Profiles
+            </a>
+          </Link>
+          <Link href="/tokens/purchase">
+            <a style={{ 
+              backgroundColor: '#FFD93D',
+              color: '#333',
+              padding: '10px 15px',
+              textDecoration: 'none',
+              borderRadius: '5px',
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              Purchase Tokens
+            </a>
+          </Link>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
