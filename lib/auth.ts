@@ -2,9 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { getServerSession } from 'next-auth'
 import { Session } from 'next-auth'
 import prisma from './prisma'
-
-// Import NextAuth configuration
-const authOptions = require('../pages/api/auth/[...nextauth]').default
+import { authOptions } from '../pages/api/auth/[...nextauth]'
 
 // Extended session interface with our custom fields
 interface ExtendedSession extends Session {

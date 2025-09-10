@@ -1,163 +1,191 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import bcrypt from 'bcrypt'
 import prisma from '../../../lib/prisma'
-import { awardTokens } from '../../../lib/auth'
 
-interface RegisterRequest {
-  email: string
-  password: string
-  role: string
-  firstName?: string
-  lastName?: string
-  state?: string
-  location?: string
-  schoolId?: string
-  verificationData?: any
+// Email domain validation for coaches
+const isValidSchoolDomain = (email: string): boolean => {
+  const schoolDomains = [
+    '.edu',
+    '.k12.',
+    '.schools.',
+    '.school.',
+    '.district.',
+    'college.edu',
+    'university.edu'
+  ]
+  
+  const emailLower = email.toLowerCase()
+  return schoolDomains.some(domain => emailLower.includes(domain))
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return res.status(405).json({ message: 'Method not allowed' })
   }
 
   try {
-    const {
-      email,
-      password,
-      role,
-      firstName,
-      lastName,
-      state = 'Alabama',
-      location,
-      schoolId,
-      verificationData
-    }: RegisterRequest = req.body
+    const { email, password, role, profileData } = req.body
 
-    // Validation
+    // Validate required fields
     if (!email || !password || !role) {
-      return res.status(400).json({ 
-        error: 'Email, password, and role are required' 
-      })
+      return res.status(400).json({ message: 'Email, password, and role are required' })
     }
 
-    const validRoles = ['ATHLETE', 'COACH', 'PARENT', 'MEDIA', 'ADMIN', 'BUSINESS']
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({ 
-        error: 'Invalid role specified' 
-      })
+    // Role-specific validation
+    if (role === 'COACH' || role === 'Coach') {
+      if (!profileData?.schoolEmail || !profileData?.schoolId) {
+        return res.status(400).json({ 
+          message: 'School email and school selection required for coach registration' 
+        })
+      }
+
+      // Validate school email domain
+      if (!isValidSchoolDomain(profileData.schoolEmail)) {
+        return res.status(400).json({ 
+          message: 'Coach email must be from a valid educational domain (.edu, .k12, .schools, etc.)' 
+        })
+      }
+    }
+
+    if (role === 'MEDIA' || role === 'Media') {
+      if (!profileData?.mediaOutlet || !profileData?.mediaCredentials) {
+        return res.status(400).json({ 
+          message: 'Media outlet and credentials required for media registration' 
+        })
+      }
+    }
+
+    if (role === 'ATHLETE' || role === 'Athlete') {
+      if (!profileData?.gradYear || !profileData?.schoolId) {
+        return res.status(400).json({ 
+          message: 'Graduation year and school selection required for athlete registration' 
+        })
+      }
     }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: email.toLowerCase() }
+      where: { email }
     })
 
     if (existingUser) {
-      return res.status(409).json({ 
-        error: 'User already exists with this email' 
-      })
+      return res.status(400).json({ message: 'User already exists with this email' })
     }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Determine initial verification status
-    const needsVerification = ['COACH', 'MEDIA'].includes(role)
-    
-    // Create user with role-specific defaults
+    // Normalize role to uppercase for database consistency
+    const normalizedRole = role.toUpperCase()
+
+    // Determine verification status
+    const verificationStatus = (normalizedRole === 'COACH' || normalizedRole === 'MEDIA') ? 'pending' : 'unverified'
+    const verified = (normalizedRole === 'ATHLETE' || normalizedRole === 'PARENT' || normalizedRole === 'FAN' || normalizedRole === 'BUSINESS' || normalizedRole === 'ORGANIZATION')
+
+    // Create user
     const user = await prisma.user.create({
       data: {
-        email: email.toLowerCase(),
+        email,
         password: hashedPassword,
-        role,
-        state,
-        location,
-        verified: !needsVerification,
-        verificationData: verificationData ? JSON.stringify(verificationData) : null,
-        tokenBalance: 0 // Will be awarded after creation
+        role: normalizedRole,
+        verified,
+        verificationStatus,
+        tokenBalance: normalizedRole === 'ATHLETE' ? 10 : 5, // Welcome bonus tokens
       }
     })
 
-    // Award signup bonus tokens based on role
-    const signupBonus = getSignupBonus(role)
-    if (signupBonus > 0) {
-      await awardTokens(
-        user.id,
-        signupBonus,
-        'SIGNUP',
-        user.id,
-        `Welcome bonus for ${role} signup`
-      )
+    // Create profile with role-specific data
+    const profileCreateData: any = {
+      userId: user.id,
+      firstName: profileData?.firstName || '',
+      lastName: profileData?.lastName || '',
+      verified: verified,
+      verificationStatus: verificationStatus === 'pending' ? 'pending' : undefined,
     }
 
-    // Create profile for athletes
-    if (role === 'ATHLETE' && firstName && lastName) {
-      await prisma.profile.create({
-        data: {
-          userId: user.id,
-          firstName,
-          lastName,
-          schoolId,
-          public: true
-        }
-      })
+    // Role-specific profile data
+    if (normalizedRole === 'ATHLETE') {
+      profileCreateData.graduationYear = parseInt(profileData.gradYear)
+      profileCreateData.position = profileData.position
+      profileCreateData.schoolId = profileData.schoolId
+      profileCreateData.additionalInfo = profileData.athleteOrganization || null
     }
 
-    // Create coach verification record if needed
-    if (role === 'COACH' && needsVerification) {
-      await prisma.coachVerification.create({
-        data: {
-          userId: user.id,
-          schoolId,
-          status: 'PENDING',
-          ...verificationData
-        }
-      })
+    if (normalizedRole === 'COACH') {
+      profileCreateData.schoolId = profileData.schoolId
+      profileCreateData.schoolEmail = profileData.schoolEmail
+      profileCreateData.communicationEmail = profileData.communicationEmail
+      profileCreateData.verificationSubmittedAt = new Date()
+      // Set default privileges (will be activated after admin approval)
+      profileCreateData.teamAdminPrivileges = false
+      profileCreateData.canVerifyStats = false
+      profileCreateData.canManageTeam = false
+      profileCreateData.canCreateAwards = false
     }
 
-    // Log audit trail
-    await prisma.auditLog.create({
+    if (normalizedRole === 'MEDIA') {
+      profileCreateData.mediaOutlet = profileData.mediaOutlet
+      profileCreateData.mediaCredentials = profileData.mediaCredentials
+      profileCreateData.verificationSubmittedAt = new Date()
+      // Set default privileges (will be activated after admin approval)
+      profileCreateData.canCreateSpotlights = false
+      profileCreateData.canCreateAwards = false
+      profileCreateData.mediaVerified = false
+    }
+
+    if (normalizedRole === 'ORGANIZATION') {
+      profileCreateData.additionalInfo = profileData.organization
+    }
+
+    if (normalizedRole === 'BUSINESS') {
+      profileCreateData.additionalInfo = profileData.businessName
+    }
+
+    // Create profile
+    await prisma.profile.create({
+      data: profileCreateData
+    })
+
+    // Create welcome token transaction
+    await prisma.tokenTransaction.create({
       data: {
         userId: user.id,
-        action: 'USER_REGISTERED',
-        resource: 'users',
-        resourceId: user.id,
-        newData: JSON.stringify({
-          role,
-          verified: user.verified,
-          state
-        })
+        type: 'EARNED',
+        amount: normalizedRole === 'ATHLETE' ? 10 : 5,
+        balance: normalizedRole === 'ATHLETE' ? 10 : 5,
+        source: 'REGISTRATION',
+        description: 'Welcome bonus tokens'
       }
     })
 
+    // Create notification for pending verifications
+    if (verificationStatus === 'pending') {
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          type: 'VERIFICATION_SUBMITTED',
+          title: 'Verification Submitted',
+          message: `Your ${normalizedRole.toLowerCase()} verification has been submitted and is pending admin review. You will be notified once approved.`,
+          read: false
+        }
+      }).catch(err => console.error('Notification creation failed:', err))
+    }
+
     res.status(201).json({
-      message: 'User registered successfully',
+      message: 'User created successfully',
       user: {
         id: user.id,
         email: user.email,
         role: user.role,
         verified: user.verified,
-        tokenBalance: signupBonus,
-        needsVerification
-      }
+        verificationStatus: user.verificationStatus
+      },
+      tokensAwarded: normalizedRole === 'ATHLETE' ? 10 : 5,
+      requiresVerification: verificationStatus === 'pending'
     })
 
   } catch (error) {
     console.error('Registration error:', error)
-    res.status(500).json({ 
-      error: 'Internal server error during registration' 
-    })
+    res.status(500).json({ message: 'Internal server error' })
   }
-}
-
-function getSignupBonus(role: string): number {
-  const bonuses = {
-    ATHLETE: 10,
-    COACH: 15,
-    PARENT: 5,
-    MEDIA: 20,
-    ADMIN: 0,
-    BUSINESS: 0
-  }
-  return bonuses[role as keyof typeof bonuses] || 0
 }

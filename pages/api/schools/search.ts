@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       limit = 20
     } = req.query
 
-    const searchQuery = query.toString().trim().toLowerCase()
+    const searchQuery = query.toString().trim()
     const limitNum = Math.min(parseInt(limit.toString()), 50)
 
     const where: any = {}

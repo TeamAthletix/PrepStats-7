@@ -59,8 +59,8 @@ export default function SchoolSelect({
       setLoading(true)
       try {
         const params = new URLSearchParams({
-          q: query,
-          state: state,
+          query: query,
+          state: state === 'ALL' ? 'AL' : state,
           limit: '8'
         })
 
@@ -166,6 +166,7 @@ export default function SchoolSelect({
         required={required}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         autoComplete="off"
+        style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' }}
       />
 
       {/* Loading indicator */}
@@ -177,16 +178,37 @@ export default function SchoolSelect({
 
       {/* Dropdown */}
       {isOpen && schools.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+        <div style={{ 
+          position: 'absolute', 
+          zIndex: 50, 
+          width: '100%', 
+          marginTop: '4px', 
+          backgroundColor: 'white', 
+          border: '1px solid #ddd', 
+          borderRadius: '8px', 
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', 
+          maxHeight: '256px', 
+          overflowY: 'auto' 
+        }}>
           {schools.map((school) => (
             <button
               key={school.id}
               type="button"
               onClick={() => handleSchoolSelect(school)}
-              className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 focus:outline-none focus:bg-blue-50"
+              style={{ 
+                width: '100%', 
+                padding: '12px 16px', 
+                textAlign: 'left', 
+                backgroundColor: 'transparent', 
+                border: 'none', 
+                borderBottom: '1px solid #f0f0f0',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
             >
-              <div className="font-medium text-gray-900">{school.name}</div>
-              <div className="text-sm text-gray-600">
+              <div style={{ fontWeight: '500', color: '#333' }}>{school.name}</div>
+              <div style={{ fontSize: '14px', color: '#666' }}>
                 {school.city}, {school.state} • {school.classification}
               </div>
             </button>
@@ -196,12 +218,22 @@ export default function SchoolSelect({
           <button
             type="button"
             onClick={handleRequestSchool}
-            className="w-full px-4 py-3 text-left hover:bg-gray-50 border-t-2 border-gray-200 focus:outline-none focus:bg-blue-50"
+            style={{ 
+              width: '100%', 
+              padding: '12px 16px', 
+              textAlign: 'left', 
+              backgroundColor: 'transparent', 
+              border: 'none', 
+              borderTop: '2px solid #e0e0e0',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <div className="font-medium text-blue-600">
+            <div style={{ fontWeight: '500', color: '#2563eb' }}>
               Can't find your school?
             </div>
-            <div className="text-sm text-gray-600">
+            <div style={{ fontSize: '14px', color: '#666' }}>
               Request to add "{query}" to our database
             </div>
           </button>
@@ -210,19 +242,38 @@ export default function SchoolSelect({
 
       {/* No results message */}
       {isOpen && !loading && schools.length === 0 && query.length >= 2 && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg">
-          <div className="px-4 py-3 text-gray-600">
+        <div style={{ 
+          position: 'absolute', 
+          zIndex: 50, 
+          width: '100%', 
+          marginTop: '4px', 
+          backgroundColor: 'white', 
+          border: '1px solid #ddd', 
+          borderRadius: '8px', 
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' 
+        }}>
+          <div style={{ padding: '12px 16px', color: '#666' }}>
             No schools found for "{query}"
           </div>
           <button
             type="button"
             onClick={handleRequestSchool}
-            className="w-full px-4 py-3 text-left hover:bg-gray-50 border-t border-gray-200 focus:outline-none focus:bg-blue-50"
+            style={{ 
+              width: '100%', 
+              padding: '12px 16px', 
+              textAlign: 'left', 
+              backgroundColor: 'transparent', 
+              border: 'none', 
+              borderTop: '1px solid #e0e0e0',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <div className="font-medium text-blue-600">
+            <div style={{ fontWeight: '500', color: '#2563eb' }}>
               Request to add this school
             </div>
-            <div className="text-sm text-gray-600">
+            <div style={{ fontSize: '14px', color: '#666' }}>
               We'll review and add it to our database
             </div>
           </button>
@@ -231,45 +282,63 @@ export default function SchoolSelect({
 
       {/* School Request Modal */}
       {showRequestModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-4">Request New School</h3>
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          zIndex: 50 
+        }}>
+          <div style={{ 
+            backgroundColor: 'white', 
+            borderRadius: '8px', 
+            padding: '24px', 
+            width: '100%', 
+            maxWidth: '400px', 
+            margin: '16px' 
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px' }}>Request New School</h3>
             
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   School Name *
                 </label>
                 <input
                   type="text"
                   value={requestForm.schoolName}
                   onChange={(e) => setRequestForm(prev => ({ ...prev, schoolName: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   City *
                 </label>
                 <input
                   type="text"
                   value={requestForm.city}
                   onChange={(e) => setRequestForm(prev => ({ ...prev, city: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   State *
                 </label>
                 <select
                   value={requestForm.state}
                   onChange={(e) => setRequestForm(prev => ({ ...prev, state: e.target.value as "AL" | "GA" }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
                   required
                 >
                   <option value="AL">Alabama</option>
@@ -278,13 +347,13 @@ export default function SchoolSelect({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label style={{ display: 'block', fontSize: '14px', fontWeight: '500', color: '#374151', marginBottom: '4px' }}>
                   Classification (if known)
                 </label>
                 <select
                   value={requestForm.classification}
                   onChange={(e) => setRequestForm(prev => ({ ...prev, classification: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px' }}
                 >
                   <option value="">Select classification</option>
                   <option value="1A">1A</option>
@@ -298,12 +367,20 @@ export default function SchoolSelect({
               </div>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
               <button
                 type="button"
                 onClick={() => setShowRequestModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 disabled={requestLoading}
+                style={{ 
+                  flex: 1, 
+                  padding: '8px 16px', 
+                  border: '1px solid #d1d5db', 
+                  borderRadius: '6px', 
+                  backgroundColor: 'white', 
+                  color: '#374151', 
+                  cursor: 'pointer' 
+                }}
               >
                 Cancel
               </button>
@@ -311,7 +388,16 @@ export default function SchoolSelect({
                 type="button"
                 onClick={submitSchoolRequest}
                 disabled={requestLoading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                style={{ 
+                  flex: 1, 
+                  padding: '8px 16px', 
+                  backgroundColor: '#2563eb', 
+                  color: 'white', 
+                  border: 'none', 
+                  borderRadius: '6px', 
+                  cursor: 'pointer',
+                  opacity: requestLoading ? 0.5 : 1
+                }}
               >
                 {requestLoading ? 'Submitting...' : 'Submit Request'}
               </button>

@@ -21,7 +21,6 @@ export default function SignUp() {
     businessName: '',
     mediaOutlet: '',
     schoolEmail: '',
-    communicationEmail: '',
     mediaCredentials: ''
   })
   const [loading, setLoading] = useState(false)
@@ -86,7 +85,6 @@ export default function SignUp() {
             businessName: formData.businessName,
             mediaOutlet: formData.mediaOutlet,
             schoolEmail: formData.schoolEmail,
-            communicationEmail: formData.communicationEmail,
             mediaCredentials: formData.mediaCredentials,
             verificationStatus: (formData.role === 'Coach' || formData.role === 'Media') ? 'pending' : 'verified'
           }
@@ -155,6 +153,22 @@ export default function SignUp() {
                 required
               />
             </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                Organization: <span style={{ fontSize: '12px', fontWeight: 'normal', color: '#666' }}>(optional)</span>
+              </label>
+              <input
+                type="text"
+                name="athleteOrganization"
+                value={formData.athleteOrganization}
+                onChange={handleChange}
+                placeholder="e.g., Travel team, club, training facility, recruiting service"
+                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' }}
+              />
+              <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                Optional: Link to travel teams, clubs, or organizations that help manage your athletic profile
+              </p>
+            </div>
           </>
         )
       
@@ -185,27 +199,48 @@ export default function SignUp() {
                 style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' }}
               />
               <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                Must be from school domain (.edu, .k12, .schools, etc.) for verification
+                Must be from school domain (.edu, .k12, .schools, etc.) for verification. This will also be used for platform notifications.
               </p>
-            </div>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                Communication Email: <span style={{ fontSize: '12px', fontWeight: 'normal' }}>(optional)</span>
-              </label>
-              <input
-                type="email"
-                name="communicationEmail"
-                value={formData.communicationEmail}
-                onChange={handleChange}
-                placeholder="Personal email for notifications (optional)"
-                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' }}
-              />
             </div>
           </>
         )
       
       case 'Media':
-        return null // TODO: Add Media fields
+        return (
+          <>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                Media Outlet: <span style={{ color: '#c62828' }}>*</span>
+              </label>
+              <input
+                type="text"
+                name="mediaOutlet"
+                value={formData.mediaOutlet}
+                onChange={handleChange}
+                placeholder="Enter your media outlet/publication"
+                required
+                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' }}
+              />
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                Media Credentials: <span style={{ color: '#c62828' }}>*</span>
+              </label>
+              <textarea
+                name="mediaCredentials"
+                value={formData.mediaCredentials}
+                onChange={handleChange}
+                placeholder="Provide verification details: press pass number, publication website, editor contact, social media accounts, portfolio links, etc."
+                required
+                rows={4}
+                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px', resize: 'vertical' }}
+              />
+              <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                Media status requires admin approval. Include verifiable credentials for faster review.
+              </p>
+            </div>
+          </>
+        )
       
       case 'Organization':
         return (
@@ -237,39 +272,6 @@ export default function SignUp() {
               style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' }}
             />
           </div>
-        )
-        return (
-          <>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Media Outlet:</label>
-              <input
-                type="text"
-                name="mediaOutlet"
-                value={formData.mediaOutlet}
-                onChange={handleChange}
-                placeholder="Enter your media outlet/publication"
-                required
-                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px' }}
-              />
-            </div>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                Media Credentials:
-              </label>
-              <textarea
-                name="mediaCredentials"
-                value={formData.mediaCredentials}
-                onChange={handleChange}
-                placeholder="Provide verification details: press pass number, publication website, editor contact, social media accounts, etc."
-                required
-                rows={4}
-                style={{ width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '5px', fontSize: '16px', resize: 'vertical' }}
-              />
-              <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-                Media status requires admin approval. Include verifiable credentials.
-              </p>
-            </div>
-          </>
         )
       
       default:

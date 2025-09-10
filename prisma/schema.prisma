@@ -22,6 +22,7 @@ model User {
   verified          Boolean  @default(false)
   verifiedAt        DateTime?
   verificationData  String?  // JSON: {school_email, letterhead, nfhs_id}
+  verificationStatus String  @default("unverified") // unverified, pending, approved, rejected
   
   // Location & Context
   state             String   @default("Alabama")
@@ -49,6 +50,7 @@ model User {
   awards            Award[]
   posters           Poster[]
   parentLinks       ParentLink[]
+  notifications     Notification[]
   
   @@map("users")
 }
@@ -90,6 +92,29 @@ model Profile {
   // Settings
   public          Boolean  @default(true)
   verified        Boolean  @default(false)
+  
+  // Verification Fields
+  verificationStatus      String?   // pending, approved, rejected
+  verificationSubmittedAt DateTime?
+  verificationCompletedAt DateTime?
+  rejectReason           String?
+  
+  // Coach-specific fields
+  schoolEmail            String?
+  communicationEmail     String?
+  teamAdminPrivileges    Boolean   @default(false)
+  canVerifyStats         Boolean   @default(false)
+  canManageTeam          Boolean   @default(false)
+  canCreateAwards        Boolean   @default(false)
+  
+  // Media-specific fields  
+  mediaOutlet            String?
+  mediaCredentials       String?
+  canCreateSpotlights    Boolean   @default(false)
+  mediaVerified          Boolean   @default(false)
+  
+  // General additional info
+  additionalInfo         String?
   
   // Metadata
   createdAt       DateTime @default(now())
@@ -163,6 +188,8 @@ model Team {
   // Coach Management
   headCoachId String?
   coachIds    String?  // JSON array of coach user IDs
+  coachId     String?
+  coachVerified Boolean @default(false)
   
   // Team Stats
   wins        Int      @default(0)
@@ -179,8 +206,27 @@ model Team {
   stats       Stat[]
   games       Game[]
   
-  @@unique([schoolId, sport, season, division])
+  @@unique([schoolId, sport])
   @@map("teams")
+}
+
+// ============================================================================
+// NOTIFICATIONS
+// ============================================================================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  type      String   // VERIFICATION_APPROVED, VERIFICATION_REJECTED, etc.
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  
+  @@map("notifications")
 }
 
 // ============================================================================
